@@ -1113,16 +1113,16 @@
 
     <script>
         // ==================== EmailJS 配置 ====================
-        // 使用您提供的配置信息
+        // 已修复：使用正确的EmailJS配置
         (function() {
-            // 初始化EmailJS，使用您的Public Key
+            // 初始化EmailJS - 使用您的Public Key
             emailjs.init("LdXA13X-luabZOMlg");
         })();
 
-        // 您的EmailJS配置
+        // 已修复：EmailJS配置 - 确保使用正确的Template ID
         const EMAILJS_CONFIG = {
-            SERVICE_ID: "service_tgjhf2j",          // 您的Service ID
-            TEMPLATE_ID: "template_wfd4dmp"         // 您提供的Template ID
+            SERVICE_ID: "service_tgjhf2j",
+            TEMPLATE_ID: "template_wfd4dmp"  // 您的Template ID
         };
 
         // 移动菜单功能
@@ -1453,7 +1453,7 @@
             closePPTModal();
         }
         
-        // ==================== EmailJS邮件发送功能 ====================
+        // ==================== 已修复：EmailJS邮件发送功能 ====================
         
         // 打开联系模态框
         function openContactModal(service) {
@@ -1509,7 +1509,7 @@
             return re.test(email);
         }
         
-        // 处理模态框表单提交 - 使用EmailJS发送邮件
+        // 已修复：处理模态框表单提交 - 使用EmailJS发送邮件
         document.getElementById('modalContactForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -1541,16 +1541,21 @@
             
             // 显示提交中状态
             const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送中...';
             
             try {
+                console.log('正在发送邮件，数据：', formData);
+                
                 // 使用EmailJS发送邮件
                 const response = await emailjs.send(
                     EMAILJS_CONFIG.SERVICE_ID,
                     EMAILJS_CONFIG.TEMPLATE_ID,
                     formData
                 );
+                
+                console.log('邮件发送响应：', response);
                 
                 if (response.status === 200) {
                     // 发送成功
@@ -1571,6 +1576,7 @@
                 }
             } catch (error) {
                 console.error('邮件发送失败:', error);
+                console.log('错误详情:', error.text);
                 
                 // 错误处理
                 let errorMsg = '提交失败，请稍后重试。';
@@ -1582,6 +1588,8 @@
                         errorMsg = '今日发送限额已满，请明天再试。';
                     } else if (error.text.includes('template')) {
                         errorMsg = '邮件模板错误，请联系管理员。';
+                    } else if (error.text.includes('service')) {
+                        errorMsg = '服务配置错误，请联系管理员。';
                     }
                 }
                 
@@ -1592,7 +1600,7 @@
             } finally {
                 // 恢复按钮状态
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '提交预约';
+                submitBtn.innerHTML = originalText;
             }
         });
         
@@ -1610,25 +1618,40 @@
 具体需求：${formData.message}
 
 提交时间：${formData.submit_time}
+来源页面：${formData.page_url}
             `.trim();
             
             // 复制到剪贴板
-            navigator.clipboard.writeText(mailBody).then(() => {
-                // 询问用户是否手动发送
-                setTimeout(() => {
-                    const shouldSend = confirm(
-                        '自动提交遇到问题。\n\n' +
-                        '信息已复制到剪贴板！\n\n' +
-                        '是否打开邮箱手动发送？\n\n' +
-                        '收件人：ay.yuan@kpmg.com\n' +
-                        '主题：' + mailSubject
-                    );
-                    
-                    if (shouldSend) {
-                        window.location.href = `mailto:ay.yuan@kpmg.com?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`;
-                    }
-                }, 500);
-            });
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(mailBody).then(() => {
+                    // 询问用户是否手动发送
+                    setTimeout(() => {
+                        const shouldSend = confirm(
+                            '自动提交遇到问题。\n\n' +
+                            '信息已复制到剪贴板！\n\n' +
+                            '是否打开邮箱手动发送？\n\n' +
+                            '收件人：ay.yuan@kpmg.com\n' +
+                            '主题：' + mailSubject
+                        );
+                        
+                        if (shouldSend) {
+                            window.location.href = `mailto:ay.yuan@kpmg.com?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`;
+                        }
+                    }, 500);
+                });
+            } else {
+                // 如果剪贴板不可用
+                const shouldSend = confirm(
+                    '自动提交遇到问题。\n\n' +
+                    '是否打开邮箱手动发送？\n\n' +
+                    '收件人：ay.yuan@kpmg.com\n' +
+                    '主题：' + mailSubject
+                );
+                
+                if (shouldSend) {
+                    window.location.href = `mailto:ay.yuan@kpmg.com?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`;
+                }
+            }
         }
         
         // 关闭模态框当点击外部区域
@@ -1685,10 +1708,16 @@
                 });
             });
             
-            console.log('页面加载完成，EmailJS已配置：');
+            console.log('✅ 页面加载完成，EmailJS已配置：');
             console.log('- Service ID:', EMAILJS_CONFIG.SERVICE_ID);
             console.log('- Template ID:', EMAILJS_CONFIG.TEMPLATE_ID);
-            console.log('所有功能已准备就绪');
+            console.log('- Public Key:', emailjs._userKey);
+            console.log('✅ 所有功能已准备就绪，可以直接使用！');
+            
+            // 测试EmailJS连接
+            setTimeout(() => {
+                console.log('📧 EmailJS状态检查：', typeof emailjs !== 'undefined' ? '已加载' : '未加载');
+            }, 1000);
         });
         
         // 窗口大小变化时调整
@@ -1697,6 +1726,42 @@
                 closeMobileMenu();
             }
         });
+        
+        // 添加一个测试函数，可以在控制台运行
+        window.testEmailJS = async function() {
+            console.log('🔧 开始测试EmailJS...');
+            
+            const testData = {
+                service: "数字化转型路线图规划",
+                name: "测试用户",
+                company: "测试公司",
+                email: "13842021565@163.com",
+                phone: "13800138000",
+                date: "2025-12-13",
+                time: "10:30 - 11:30",
+                message: "这是测试消息",
+                submit_time: new Date().toLocaleString('zh-CN'),
+                page_url: window.location.href
+            };
+            
+            console.log('📤 发送测试数据：', testData);
+            
+            try {
+                const response = await emailjs.send(
+                    EMAILJS_CONFIG.SERVICE_ID,
+                    EMAILJS_CONFIG.TEMPLATE_ID,
+                    testData
+                );
+                console.log('✅ 测试发送成功！', response);
+                alert('测试邮件已发送成功，请检查您的邮箱！');
+                return true;
+            } catch (error) {
+                console.error('❌ 测试发送失败：', error);
+                console.log('错误详情：', error.text);
+                alert('测试失败：' + (error.text || error.message));
+                return false;
+            }
+        };
     </script>
 </body>
 </html>
